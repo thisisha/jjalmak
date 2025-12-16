@@ -4,24 +4,14 @@ import { createServer } from "http";
 import net from "net";
 import path from "path";
 import fs from "fs";
-import { fileURLToPath } from "url";
 import cors from "cors";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 
-// Get __dirname equivalent for ES modules
-// In production (esbuild bundle), import.meta.url may not work correctly
-// So we'll use process.cwd() as the base path
-let __dirname: string | undefined;
-try {
-  const __filename = fileURLToPath(import.meta.url);
-  __dirname = path.dirname(__filename);
-} catch (e) {
-  console.warn("[Server] Could not determine __dirname from import.meta.url, using process.cwd()");
-  __dirname = undefined;
-}
+// Note: In production (esbuild bundle), we use process.cwd() instead of __dirname
+// because import.meta.url may not work correctly after bundling
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
