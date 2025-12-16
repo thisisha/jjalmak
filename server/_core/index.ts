@@ -70,25 +70,14 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // Serve uploaded files
-  // Try multiple possible paths for uploads directory
-  const uploadsPaths = [
-    path.resolve(process.cwd(), "public", "uploads"),
-    __dirname ? path.resolve(__dirname, "../public/uploads") : null,
-  ].filter((p): p is string => p !== null && p !== undefined);
-  
-  let uploadsPath: string | null = null;
-  for (const testPath of uploadsPaths) {
-    if (fs.existsSync(testPath)) {
-      uploadsPath = testPath;
-      console.log(`[Uploads] Using path: ${uploadsPath}`);
-      break;
-    }
-  }
-  
-  if (uploadsPath) {
+  // In Railway, use process.cwd() only (__dirname may be undefined in bundled code)
+  const uploadsPath = path.resolve(process.cwd(), "public", "uploads");
+  if (fs.existsSync(uploadsPath)) {
     app.use("/uploads", express.static(uploadsPath));
+    console.log(`[Uploads] Using path: ${uploadsPath}`);
   } else {
-    console.warn(`[Uploads] Uploads directory not found. Tried: ${uploadsPaths.join(", ")}`);
+    console.warn(`[Uploads] Uploads directory not found at: ${uploadsPath}`);
+    // Continue without uploads - not critical for API server
   }
   // Auth routes (login/register)
   registerOAuthRoutes(app);
