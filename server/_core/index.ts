@@ -1,4 +1,9 @@
 import "dotenv/config";
+// Ensure crypto is available globally for jose library
+import { webcrypto } from "node:crypto";
+if (typeof globalThis.crypto === "undefined") {
+  (globalThis as any).crypto = webcrypto;
+}
 import express from "express";
 import { createServer } from "http";
 import net from "net";
