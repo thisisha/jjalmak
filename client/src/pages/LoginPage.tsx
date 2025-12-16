@@ -65,11 +65,20 @@ export default function LoginPage() {
     
     try {
       // Use VITE_API_BASE_URL if available (Railway backend), otherwise same-origin
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
+      const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").trim();
       const endpoint = isLogin ? "/api/auth/login" : "/api/auth/register";
-      const fullUrl = apiBaseUrl 
-        ? `${apiBaseUrl.replace(/\/$/, "")}${endpoint}`
-        : endpoint;
+      
+      // Ensure apiBaseUrl starts with http:// or https://
+      let fullUrl: string;
+      if (apiBaseUrl) {
+        // If apiBaseUrl doesn't start with http:// or https://, add https://
+        const baseUrl = apiBaseUrl.startsWith("http://") || apiBaseUrl.startsWith("https://")
+          ? apiBaseUrl
+          : `https://${apiBaseUrl}`;
+        fullUrl = `${baseUrl.replace(/\/$/, "")}${endpoint}`;
+      } else {
+        fullUrl = endpoint;
+      }
       
       const requestBody = {
         email: email.trim() || undefined,

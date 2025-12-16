@@ -37,14 +37,20 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
+const apiBaseUrlRaw = (import.meta.env.VITE_API_BASE_URL ?? "").trim();
+// Ensure apiBaseUrl starts with http:// or https://
+const apiBaseUrl = apiBaseUrlRaw && !apiBaseUrlRaw.startsWith("http://") && !apiBaseUrlRaw.startsWith("https://")
+  ? `https://${apiBaseUrlRaw}`
+  : apiBaseUrlRaw;
 
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
       // In production we usually hit a separate backend domain (e.g. Railway).
       // When VITE_API_BASE_URL is empty, fall back to same-origin (dev mode).
-      url: `${apiBaseUrl}/api/trpc`.replace(/\/+$/, "").replace(/\/{2,}/g, "/"),
+      url: apiBaseUrl 
+        ? `${apiBaseUrl.replace(/\/$/, "")}/api/trpc`.replace(/\/{2,}/g, "/")
+        : "/api/trpc",
       transformer: superjson,
       fetch(input, init) {
         const target =
