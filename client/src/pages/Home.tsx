@@ -179,6 +179,66 @@ export default function Home() {
       },
       (error) => {
         console.error("Geolocation error:", error);
+        console.error("Error code:", error.code, "Error message:", error.message);
+        
+        // 사파리에서 PERMISSION_DENIED가 나와도 실제로는 권한이 있을 수 있음
+        // enableHighAccuracy: true로 시도했을 때 실패하면 false로 재시도
+        if (error.code === error.PERMISSION_DENIED && isSafari && geoOptions.enableHighAccuracy) {
+          console.log("[Home] Safari permission denied with enableHighAccuracy: true, retrying with false");
+          navigator.geolocation.getCurrentPosition(
+            async (position) => {
+              try {
+                const { latitude, longitude } = position.coords;
+                const addr = await reverseGeocode(latitude, longitude);
+                if (addr?.address_name) {
+                  setNeighborhood(addr.address_name);
+                  setDefaultNeighborhood(addr.address_name);
+                  setLocationError(null);
+                  try {
+                    localStorage.setItem("lastNeighborhood", addr.address_name);
+                  } catch (e) {
+                    console.warn("Failed to save neighborhood to localStorage:", e);
+                  }
+                } else {
+                  const fallbackNeighborhood = (user as any)?.neighborhood || getInitialNeighborhood();
+                  if (fallbackNeighborhood) {
+                    setNeighborhood(fallbackNeighborhood);
+                    setDefaultNeighborhood(fallbackNeighborhood);
+                    setLocationError(null);
+                  }
+                }
+              } catch (e) {
+                const fallbackNeighborhood = (user as any)?.neighborhood || getInitialNeighborhood();
+                if (fallbackNeighborhood) {
+                  setNeighborhood(fallbackNeighborhood);
+                  setDefaultNeighborhood(fallbackNeighborhood);
+                  setLocationError(null);
+                }
+              } finally {
+                setIsLoadingLocation(false);
+              }
+            },
+            (retryError) => {
+              // 재시도도 실패하면 fallback 사용
+              const fallbackNeighborhood = (user as any)?.neighborhood || getInitialNeighborhood();
+              if (fallbackNeighborhood) {
+                setNeighborhood(fallbackNeighborhood);
+                setDefaultNeighborhood(fallbackNeighborhood);
+                setLocationError("위치 정보를 가져올 수 없어 프로필에 저장된 위치를 사용합니다.");
+              } else {
+                setLocationError("위치 정보를 가져올 수 없습니다. 프로필 설정에서 동네를 수동으로 설정해주세요.");
+              }
+              setIsLoadingLocation(false);
+            },
+            {
+              enableHighAccuracy: false,
+              timeout: 15000,
+              maximumAge: 60000,
+            }
+          );
+          return; // 첫 번째 에러 핸들러는 여기서 종료
+        }
+        
         // GPS 권한 거부 시에도 프로필 동네 사용
         const fallbackNeighborhood = (user as any)?.neighborhood || getInitialNeighborhood();
         if (fallbackNeighborhood) {
@@ -202,8 +262,8 @@ export default function Home() {
         }
         setIsLoadingLocation(false);
       },
-      {
-        enableHighAccuracy: false, // 정확도 낮춰서 API 호출 감소
+      geoOptions
+    );
         timeout: 10000,
         maximumAge: 5 * 60 * 1000, // 5분간 캐시 사용
       }
