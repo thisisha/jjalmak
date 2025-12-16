@@ -58,12 +58,26 @@ const trpcClient = trpc.createClient({
       url: "/api/trpc",
       transformer: superjson,
       fetch(input, init) {
-        // input is always a relative path from httpBatchLink
-        // Prepend apiBaseUrl if it's set, otherwise use relative path
+        // httpBatchLink may pass either a relative path or a full URL
+        // Check if input is already a full URL (starts with http:// or https://)
         let target: RequestInfo | URL;
         if (typeof input === "string") {
-          if (apiBaseUrl) {
-            // Prepend apiBaseUrl to relative path
+          if (input.startsWith("http://") || input.startsWith("https://")) {
+            // Already a full URL, use as-is (but check for double prefix)
+            // Sometimes httpBatchLink creates URLs like "https://base/https://base/path"
+            // We need to detect and fix this
+            if (input.includes("https://") && input.split("https://").length > 2) {
+              // Remove the duplicate prefix
+              const parts = input.split("https://");
+              target = `https://${parts[parts.length - 1]}`;
+            } else if (input.includes("http://") && input.split("http://").length > 2) {
+              const parts = input.split("http://");
+              target = `http://${parts[parts.length - 1]}`;
+            } else {
+              target = input;
+            }
+          } else if (apiBaseUrl) {
+            // Relative path, prepend apiBaseUrl
             const cleanBaseUrl = apiBaseUrl.replace(/\/$/, "");
             const cleanPath = input.startsWith("/") ? input : `/${input}`;
             target = `${cleanBaseUrl}${cleanPath}`;
