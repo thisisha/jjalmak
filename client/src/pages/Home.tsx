@@ -97,11 +97,13 @@ export default function Home() {
     setIsLoadingLocation(true);
     setLocationError(null);
 
-    // 모바일에서 위치 권한이 제대로 작동하도록 옵션 추가
+    // 사파리에서 위치 권한이 제대로 작동하도록 옵션 조정
+    // enableHighAccuracy: false로 설정하면 사파리에서 더 안정적으로 작동
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
     const geoOptions = {
-      enableHighAccuracy: true,
-      timeout: 10000, // 10초 타임아웃
-      maximumAge: 0, // 캐시 사용 안 함
+      enableHighAccuracy: !isSafari, // 사파리에서는 false로 설정
+      timeout: 15000, // 15초 타임아웃 (사파리는 더 오래 걸릴 수 있음)
+      maximumAge: isSafari ? 60000 : 0, // 사파리에서는 1분간 캐시 허용
     };
 
     navigator.geolocation.getCurrentPosition(
