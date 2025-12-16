@@ -39,17 +39,35 @@ export default function LoginPage() {
         return;
       }
 
-      // Wait a bit for cookie to be set
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      await utils.auth.me.invalidate();
-      await utils.auth.me.refetch();
-      
       toast.success("카카오 로그인되었습니다!");
       
+      // Wait longer for cookie to be set, especially on mobile
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      await new Promise(resolve => setTimeout(resolve, isMobile ? 1000 : 500));
+      
+      // Refresh auth state multiple times to ensure it's updated
+      await utils.auth.me.invalidate();
+      
+      // Try to refetch auth state
+      let retries = 0;
+      let userData = null;
+      while (retries < 3 && !userData) {
+        try {
+          userData = await utils.auth.me.refetch();
+          if (userData?.data) break;
+        } catch (e) {
+          console.warn(`[Login] Auth refetch attempt ${retries + 1} failed:`, e);
+        }
+        retries++;
+        if (retries < 3) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+      
       // Force page reload on mobile to ensure cookies are properly set
-      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        window.location.href = "/";
+      if (isMobile) {
+        // Use window.location.replace to avoid back button issues
+        window.location.replace("/");
       } else {
         setLocation("/");
       }
@@ -122,18 +140,35 @@ export default function LoginPage() {
         return;
       }
 
-      // Wait a bit for cookie to be set
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Refresh auth state
-      await utils.auth.me.invalidate();
-      await utils.auth.me.refetch();
-      
       toast.success(isLogin ? "로그인되었습니다!" : "회원가입되었습니다!");
       
+      // Wait longer for cookie to be set, especially on mobile
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      await new Promise(resolve => setTimeout(resolve, isMobile ? 1000 : 500));
+      
+      // Refresh auth state multiple times to ensure it's updated
+      await utils.auth.me.invalidate();
+      
+      // Try to refetch auth state
+      let retries = 0;
+      let userData = null;
+      while (retries < 3 && !userData) {
+        try {
+          userData = await utils.auth.me.refetch();
+          if (userData?.data) break;
+        } catch (e) {
+          console.warn(`[Login] Auth refetch attempt ${retries + 1} failed:`, e);
+        }
+        retries++;
+        if (retries < 3) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+      
       // Force page reload on mobile to ensure cookies are properly set
-      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        window.location.href = "/";
+      if (isMobile) {
+        // Use window.location.replace to avoid back button issues
+        window.location.replace("/");
       } else {
         setLocation("/");
       }
