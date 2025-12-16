@@ -1,0 +1,192 @@
+import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
+import { initKakao, loginWithKakao } from "@/lib/kakao";
+
+export default function LoginPage() {
+  const [, setLocation] = useLocation();
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState("");
+  const [nickname, setNickname] = useState("");
+  const [password, setPassword] = useState("");
+
+  const utils = trpc.useUtils();
+
+  useEffect(() => {
+    initKakao();
+  }, []);
+
+  const handleKakaoLogin = async () => {
+    try {
+      const accessToken = await loginWithKakao();
+      
+      const response = await fetch("/api/auth/kakao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ accessToken }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast.error(data.error || "카카오 로그인에 실패했습니다.");
+        return;
+      }
+
+      await utils.auth.me.invalidate();
+      toast.success("카카오 로그인되었습니다!");
+      setLocation("/");
+    } catch (error) {
+      toast.error("카카오 로그인 중 오류가 발생했습니다.");
+      console.error(error);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // 로그인 모드: 아이디(이메일/텍스트)만 있어도 로그인
+    if (isLogin && !email.trim()) {
+      toast.error("아이디(이메일)를 입력해주세요.");
+      return;
+    }
+    
+    // 회원가입 모드: 닉네임 필수
+    if (!isLogin && !nickname) {
+      toast.error("닉네임을 입력해주세요.");
+      return;
+    }
+    
+    try {
+      const endpoint = isLogin ? "/api/auth/login" : "/api/auth/register";
+      const requestBody = {
+        email: email.trim() || undefined,
+        // 로그인: email만 사용, 회원가입: nickname도 함께 전송
+        nickname: !isLogin ? nickname.trim() || undefined : undefined,
+        password: password || undefined,
+      };
+      
+      console.log("[Login] Sending request to:", endpoint, requestBody);
+      
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(requestBody),
+      });
+
+      const data = await response.json();
+      console.log("[Login] Response:", response.status, data);
+
+      if (!response.ok) {
+        toast.error(data.error || (isLogin ? "로그인에 실패했습니다." : "회원가입에 실패했습니다."));
+        return;
+      }
+
+      // Refresh auth state
+      await utils.auth.me.invalidate();
+      
+      toast.success(isLogin ? "로그인되었습니다!" : "회원가입되었습니다!");
+      setLocation("/");
+    } catch (error) {
+      console.error("[Login] Error:", error);
+      toast.error("오류가 발생했습니다. 콘솔을 확인해주세요.");
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle className="text-2xl">짤막</CardTitle>
+          <CardDescription>
+            {isLogin ? "로그인하여 시작하세요" : "새 계정을 만드세요"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {!isLogin && (
+              <div className="space-y-2">
+                <Label htmlFor="nickname">닉네임 (필수)</Label>
+                <Input
+                  id="nickname"
+                  type="text"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  placeholder="닉네임을 입력하세요"
+                  required
+                />
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="email">
+                {isLogin ? "아이디 / 이메일 (필수)" : "이메일 (선택)"}
+              </Label>
+              <Input
+                id="email"
+                type="text"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder={isLogin ? "예: test 또는 test@example.com" : "예: test@example.com"}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">비밀번호 (선택, 개발 모드)</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="비밀번호를 입력하세요"
+              />
+            </div>
+            <Button type="submit" className="w-full">
+              {isLogin ? "로그인" : "회원가입"}
+            </Button>
+          </form>
+          
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">또는</span>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            onClick={handleKakaoLogin}
+            className="w-full bg-[#FEE500] text-black hover:bg-[#FEE500]/90"
+          >
+            <svg
+              className="w-5 h-5 mr-2"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M12 3c5.799 0 10.5 3.664 10.5 8.185 0 4.52-4.701 8.184-10.5 8.184a13.5 13.5 0 0 1-1.912-.123 4.5 4.5 0 0 0 2.935-4.122c0-2.23-1.769-4.04-3.95-4.04-2.181 0-3.95 1.81-3.95 4.04a4.5 4.5 0 0 0 2.935 4.122 13.5 13.5 0 0 1-1.912.123C6.201 19.369 1.5 15.705 1.5 11.185 1.5 6.664 6.201 3 12 3z" />
+            </svg>
+            카카오로 시작하기
+          </Button>
+
+          <div className="mt-4 text-center text-sm">
+            <button
+              type="button"
+              onClick={() => setIsLogin(!isLogin)}
+              className="text-primary hover:underline"
+            >
+              {isLogin ? "계정이 없으신가요? 회원가입" : "이미 계정이 있으신가요? 로그인"}
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+

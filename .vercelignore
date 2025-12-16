@@ -1,0 +1,10 @@
+server/
+dist/
+node_modules/
+drizzle/
+public/uploads/
+*.log
+.env
+.env.local
+.env.*.local
+
