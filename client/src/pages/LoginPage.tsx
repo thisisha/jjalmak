@@ -65,8 +65,13 @@ export default function LoginPage() {
     
     try {
       // Use VITE_API_BASE_URL if available (Railway backend), otherwise same-origin
-      const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").trim();
+      const apiBaseUrlRaw = import.meta.env.VITE_API_BASE_URL ?? "";
+      const apiBaseUrl = apiBaseUrlRaw.trim();
       const endpoint = isLogin ? "/api/auth/login" : "/api/auth/register";
+      
+      // Debug: Log environment variable
+      console.log("[Login] VITE_API_BASE_URL raw:", apiBaseUrlRaw);
+      console.log("[Login] VITE_API_BASE_URL trimmed:", apiBaseUrl);
       
       // Ensure apiBaseUrl starts with http:// or https://
       let fullUrl: string;
@@ -78,6 +83,7 @@ export default function LoginPage() {
         fullUrl = `${baseUrl.replace(/\/$/, "")}${endpoint}`;
       } else {
         fullUrl = endpoint;
+        console.warn("[Login] VITE_API_BASE_URL is not set, using relative path:", fullUrl);
       }
       
       const requestBody = {
@@ -87,7 +93,8 @@ export default function LoginPage() {
         password: password || undefined,
       };
       
-      console.log("[Login] Sending request to:", fullUrl, requestBody);
+      console.log("[Login] Full URL:", fullUrl);
+      console.log("[Login] Request body:", requestBody);
       
       const response = await fetch(fullUrl, {
         method: "POST",

@@ -37,11 +37,18 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
-const apiBaseUrlRaw = (import.meta.env.VITE_API_BASE_URL ?? "").trim();
+const apiBaseUrlRaw = import.meta.env.VITE_API_BASE_URL ?? "";
+const apiBaseUrlTrimmed = apiBaseUrlRaw.trim();
 // Ensure apiBaseUrl starts with http:// or https://
-const apiBaseUrl = apiBaseUrlRaw && !apiBaseUrlRaw.startsWith("http://") && !apiBaseUrlRaw.startsWith("https://")
-  ? `https://${apiBaseUrlRaw}`
-  : apiBaseUrlRaw;
+const apiBaseUrl = apiBaseUrlTrimmed && !apiBaseUrlTrimmed.startsWith("http://") && !apiBaseUrlTrimmed.startsWith("https://")
+  ? `https://${apiBaseUrlTrimmed}`
+  : apiBaseUrlTrimmed;
+
+// Debug: Log API base URL (only in development or if not set)
+if (import.meta.env.DEV || !apiBaseUrl) {
+  console.log("[tRPC] VITE_API_BASE_URL raw:", apiBaseUrlRaw);
+  console.log("[tRPC] VITE_API_BASE_URL processed:", apiBaseUrl);
+}
 
 const trpcClient = trpc.createClient({
   links: [
