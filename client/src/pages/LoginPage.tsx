@@ -39,9 +39,20 @@ export default function LoginPage() {
         return;
       }
 
+      // Wait a bit for cookie to be set
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       await utils.auth.me.invalidate();
+      await utils.auth.me.refetch();
+      
       toast.success("카카오 로그인되었습니다!");
-      setLocation("/");
+      
+      // Force page reload on mobile to ensure cookies are properly set
+      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        window.location.href = "/";
+      } else {
+        setLocation("/");
+      }
     } catch (error) {
       toast.error("카카오 로그인 중 오류가 발생했습니다.");
       console.error(error);
@@ -111,11 +122,21 @@ export default function LoginPage() {
         return;
       }
 
+      // Wait a bit for cookie to be set
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       // Refresh auth state
       await utils.auth.me.invalidate();
+      await utils.auth.me.refetch();
       
       toast.success(isLogin ? "로그인되었습니다!" : "회원가입되었습니다!");
-      setLocation("/");
+      
+      // Force page reload on mobile to ensure cookies are properly set
+      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        window.location.href = "/";
+      } else {
+        setLocation("/");
+      }
     } catch (error) {
       console.error("[Login] Error:", error);
       toast.error("오류가 발생했습니다. 콘솔을 확인해주세요.");

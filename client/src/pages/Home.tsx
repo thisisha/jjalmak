@@ -97,6 +97,13 @@ export default function Home() {
     setIsLoadingLocation(true);
     setLocationError(null);
 
+    // 모바일에서 위치 권한이 제대로 작동하도록 옵션 추가
+    const geoOptions = {
+      enableHighAccuracy: true,
+      timeout: 10000, // 10초 타임아웃
+      maximumAge: 0, // 캐시 사용 안 함
+    };
+
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         try {
