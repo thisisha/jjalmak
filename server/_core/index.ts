@@ -3,13 +3,13 @@ import express from "express";
 import { createServer } from "http";
 import net from "net";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 import cors from "cors";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
-import { serveStatic, setupVite } from "./vite";
 
 // Get __dirname equivalent for ES modules
 // In production (esbuild bundle), import.meta.url may not work correctly
@@ -100,13 +100,13 @@ async function startServer() {
       createContext,
     })
   );
-  // development mode uses Vite, production mode uses static files
+  // development mode uses Vite, production mode is API-only
   // In Railway (production), we only serve API, not static files (Vercel serves frontend)
   if (process.env.NODE_ENV === "development") {
+    const { setupVite } = await import("./vite");
     await setupVite(app, server);
   } else {
     // Railway only serves API, Vercel serves the frontend
-    // Skip static file serving to avoid path resolution issues
     // API-only mode: return 404 for non-API routes
     app.use("*", (req, res, next) => {
       if (req.path.startsWith("/api") || req.path.startsWith("/uploads")) {
