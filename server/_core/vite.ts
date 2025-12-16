@@ -4,7 +4,9 @@ import { type Server } from "http";
 import { nanoid } from "nanoid";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import viteConfig from "../../vite.config";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import { jsxLocPlugin } from "@builder.io/vite-plugin-jsx-loc";
 
 // Note: In production (esbuild bundle), we use process.cwd() instead of __dirname
 // because import.meta.url may not work correctly after bundling
@@ -16,11 +18,24 @@ export async function setupVite(app: Express, server: Server) {
     allowedHosts: true as const,
   };
 
+  // Don't import vite.config.ts to avoid import.meta.dirname issues in production bundle
+  // Instead, create config inline using process.cwd()
+  const rootDir = process.cwd();
   const vite = await createViteServer({
-    ...viteConfig,
-    configFile: false,
+    plugins: [react(), tailwindcss(), jsxLocPlugin()],
+    resolve: {
+      alias: {
+        "@": path.resolve(rootDir, "client", "src"),
+        "@shared": path.resolve(rootDir, "shared"),
+        "@assets": path.resolve(rootDir, "attached_assets"),
+      },
+    },
+    envDir: rootDir,
+    root: path.resolve(rootDir, "client"),
+    publicDir: path.resolve(rootDir, "client", "public"),
     server: serverOptions,
     appType: "custom",
+    configFile: false,
   });
 
   app.use(vite.middlewares);
