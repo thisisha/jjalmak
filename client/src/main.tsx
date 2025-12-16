@@ -53,25 +53,22 @@ if (import.meta.env.DEV || !apiBaseUrl) {
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      // In production we usually hit a separate backend domain (e.g. Railway).
-      // When VITE_API_BASE_URL is empty, fall back to same-origin (dev mode).
-      url: apiBaseUrl 
-        ? `${apiBaseUrl.replace(/\/$/, "")}/api/trpc`.replace(/\/{2,}/g, "/")
-        : "/api/trpc",
+      // Always use relative path for url - httpBatchLink will call fetch with this path
+      // We'll prepend apiBaseUrl in the fetch function if needed
+      url: "/api/trpc",
       transformer: superjson,
       fetch(input, init) {
-        // If input is already a full URL (starts with http:// or https://), use it as-is
-        // Otherwise, prepend apiBaseUrl if it's set
+        // input is always a relative path from httpBatchLink
+        // Prepend apiBaseUrl if it's set, otherwise use relative path
         let target: RequestInfo | URL;
         if (typeof input === "string") {
-          if (input.startsWith("http://") || input.startsWith("https://")) {
-            // Already a full URL, use as-is
-            target = input;
-          } else if (apiBaseUrl) {
-            // Relative path, prepend apiBaseUrl
-            target = `${apiBaseUrl.replace(/\/$/, "")}${input.startsWith("/") ? input : `/${input}`}`;
+          if (apiBaseUrl) {
+            // Prepend apiBaseUrl to relative path
+            const cleanBaseUrl = apiBaseUrl.replace(/\/$/, "");
+            const cleanPath = input.startsWith("/") ? input : `/${input}`;
+            target = `${cleanBaseUrl}${cleanPath}`;
           } else {
-            // No apiBaseUrl, use relative path
+            // No apiBaseUrl, use relative path as-is
             target = input;
           }
         } else {
