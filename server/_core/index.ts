@@ -105,20 +105,16 @@ async function startServer() {
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
   } else {
-    // Only serve static files if we're running as a monolith (not in Railway)
     // Railway only serves API, Vercel serves the frontend
-    if (process.env.SERVE_STATIC !== "false") {
-      serveStatic(app);
-    } else {
-      // API-only mode: return 404 for non-API routes
-      app.use("*", (req, res, next) => {
-        if (req.path.startsWith("/api")) {
-          next();
-        } else {
-          res.status(404).json({ error: "Not found. This is an API-only server." });
-        }
-      });
-    }
+    // Skip static file serving to avoid path resolution issues
+    // API-only mode: return 404 for non-API routes
+    app.use("*", (req, res, next) => {
+      if (req.path.startsWith("/api") || req.path.startsWith("/uploads")) {
+        next();
+      } else {
+        res.status(404).json({ error: "Not found. This is an API-only server." });
+      }
+    });
   }
 
   const preferredPort = parseInt(process.env.PORT || "3000");
