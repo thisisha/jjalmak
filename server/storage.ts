@@ -2,7 +2,8 @@
 import fs from "fs/promises";
 import path from "path";
 
-const UPLOAD_DIR = path.resolve(import.meta.dirname, "../public/uploads");
+// Use process.cwd() instead of import.meta.dirname for production bundle compatibility
+const UPLOAD_DIR = path.resolve(process.cwd(), "public", "uploads");
 const UPLOAD_URL_PREFIX = "/uploads";
 
 // Ensure upload directory exists
