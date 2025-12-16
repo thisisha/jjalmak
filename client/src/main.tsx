@@ -60,10 +60,23 @@ const trpcClient = trpc.createClient({
         : "/api/trpc",
       transformer: superjson,
       fetch(input, init) {
-        const target =
-          apiBaseUrl && typeof input === "string"
-            ? `${apiBaseUrl.replace(/\/$/, "")}${input}`
-            : input;
+        // If input is already a full URL (starts with http:// or https://), use it as-is
+        // Otherwise, prepend apiBaseUrl if it's set
+        let target: RequestInfo | URL;
+        if (typeof input === "string") {
+          if (input.startsWith("http://") || input.startsWith("https://")) {
+            // Already a full URL, use as-is
+            target = input;
+          } else if (apiBaseUrl) {
+            // Relative path, prepend apiBaseUrl
+            target = `${apiBaseUrl.replace(/\/$/, "")}${input.startsWith("/") ? input : `/${input}`}`;
+          } else {
+            // No apiBaseUrl, use relative path
+            target = input;
+          }
+        } else {
+          target = input;
+        }
         return globalThis.fetch(target, {
           ...(init ?? {}),
           credentials: "include",
