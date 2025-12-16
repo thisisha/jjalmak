@@ -62,7 +62,26 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // Serve uploaded files
-  app.use("/uploads", express.static(path.resolve(__dirname, "../public/uploads")));
+  // Try multiple possible paths for uploads directory
+  const uploadsPaths = [
+    path.resolve(process.cwd(), "public", "uploads"),
+    __dirname ? path.resolve(__dirname, "../public/uploads") : null,
+  ].filter((p): p is string => p !== null);
+  
+  let uploadsPath: string | null = null;
+  for (const testPath of uploadsPaths) {
+    if (fs.existsSync(testPath)) {
+      uploadsPath = testPath;
+      console.log(`[Uploads] Using path: ${uploadsPath}`);
+      break;
+    }
+  }
+  
+  if (uploadsPath) {
+    app.use("/uploads", express.static(uploadsPath));
+  } else {
+    console.warn(`[Uploads] Uploads directory not found. Tried: ${uploadsPaths.join(", ")}`);
+  }
   // Auth routes (login/register)
   registerOAuthRoutes(app);
   // tRPC API

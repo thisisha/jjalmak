@@ -70,31 +70,40 @@ export async function setupVite(app: Express, server: Server) {
 export function serveStatic(app: Express) {
   // In production (Railway), the built files are in /app/dist
   // The static files are in /app/dist/public
-  const distPath =
-    process.env.NODE_ENV === "development"
-      ? path.resolve(__dirname, "../..", "dist", "public")
-      : path.resolve(__dirname, "public");
-  
-  if (!fs.existsSync(distPath)) {
-    console.error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`
-    );
-    // Try alternative path for Railway production
-    const altPath = path.resolve(process.cwd(), "dist", "public");
-    if (fs.existsSync(altPath)) {
-      console.log(`Using alternative path: ${altPath}`);
-      app.use(express.static(altPath));
-      app.use("*", (_req, res) => {
-        res.sendFile(path.resolve(altPath, "index.html"));
-      });
-      return;
+  // Try multiple possible paths
+  const possiblePaths = [
+    // Railway production: /app/dist/public
+    path.resolve(process.cwd(), "dist", "public"),
+    // Development: relative to __dirname
+    __dirname ? path.resolve(__dirname, "../..", "dist", "public") : null,
+    // Alternative: relative to __dirname in production
+    __dirname ? path.resolve(__dirname, "public") : null,
+  ].filter((p): p is string => p !== null);
+
+  let distPath: string | null = null;
+  for (const testPath of possiblePaths) {
+    if (fs.existsSync(testPath)) {
+      distPath = testPath;
+      console.log(`[Static] Using path: ${distPath}`);
+      break;
     }
+  }
+
+  if (!distPath) {
+    console.error(
+      `[Static] Could not find the build directory. Tried: ${possiblePaths.join(", ")}`
+    );
+    // Return 404 for all routes if static files not found
+    app.use("*", (_req, res) => {
+      res.status(404).send("Static files not found. Please build the client first.");
+    });
+    return;
   }
 
   app.use(express.static(distPath));
 
   // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+    res.sendFile(path.resolve(distPath!, "index.html"));
   });
 }
