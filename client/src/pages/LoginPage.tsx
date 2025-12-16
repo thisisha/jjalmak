@@ -64,7 +64,13 @@ export default function LoginPage() {
     }
     
     try {
+      // Use VITE_API_BASE_URL if available (Railway backend), otherwise same-origin
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
       const endpoint = isLogin ? "/api/auth/login" : "/api/auth/register";
+      const fullUrl = apiBaseUrl 
+        ? `${apiBaseUrl.replace(/\/$/, "")}${endpoint}`
+        : endpoint;
+      
       const requestBody = {
         email: email.trim() || undefined,
         // 로그인: email만 사용, 회원가입: nickname도 함께 전송
@@ -72,9 +78,9 @@ export default function LoginPage() {
         password: password || undefined,
       };
       
-      console.log("[Login] Sending request to:", endpoint, requestBody);
+      console.log("[Login] Sending request to:", fullUrl, requestBody);
       
-      const response = await fetch(endpoint, {
+      const response = await fetch(fullUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
