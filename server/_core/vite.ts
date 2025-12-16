@@ -3,8 +3,13 @@ import fs from "fs";
 import { type Server } from "http";
 import { nanoid } from "nanoid";
 import path from "path";
+import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
 import viteConfig from "../../vite.config";
+
+// Get __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
@@ -41,7 +46,7 @@ export async function setupVite(app: Express, server: Server) {
       }
 
       const clientTemplate = path.resolve(
-        import.meta.dirname,
+        __dirname,
         "../..",
         "client",
         "index.html"
@@ -63,14 +68,27 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
+  // In production (Railway), the built files are in /app/dist
+  // The static files are in /app/dist/public
   const distPath =
     process.env.NODE_ENV === "development"
-      ? path.resolve(import.meta.dirname, "../..", "dist", "public")
-      : path.resolve(import.meta.dirname, "public");
+      ? path.resolve(__dirname, "../..", "dist", "public")
+      : path.resolve(__dirname, "public");
+  
   if (!fs.existsSync(distPath)) {
     console.error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
+    // Try alternative path for Railway production
+    const altPath = path.resolve(process.cwd(), "dist", "public");
+    if (fs.existsSync(altPath)) {
+      console.log(`Using alternative path: ${altPath}`);
+      app.use(express.static(altPath));
+      app.use("*", (_req, res) => {
+        res.sendFile(path.resolve(altPath, "index.html"));
+      });
+      return;
+    }
   }
 
   app.use(express.static(distPath));
