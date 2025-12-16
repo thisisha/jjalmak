@@ -12,8 +12,16 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 
 // Get __dirname equivalent for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// In production (esbuild bundle), import.meta.url may not work correctly
+// So we'll use process.cwd() as the base path
+let __dirname: string | undefined;
+try {
+  const __filename = fileURLToPath(import.meta.url);
+  __dirname = path.dirname(__filename);
+} catch (e) {
+  console.warn("[Server] Could not determine __dirname from import.meta.url, using process.cwd()");
+  __dirname = undefined;
+}
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -66,7 +74,7 @@ async function startServer() {
   const uploadsPaths = [
     path.resolve(process.cwd(), "public", "uploads"),
     __dirname ? path.resolve(__dirname, "../public/uploads") : null,
-  ].filter((p): p is string => p !== null);
+  ].filter((p): p is string => p !== null && p !== undefined);
   
   let uploadsPath: string | null = null;
   for (const testPath of uploadsPaths) {

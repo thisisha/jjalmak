@@ -8,8 +8,16 @@ import { createServer as createViteServer } from "vite";
 import viteConfig from "../../vite.config";
 
 // Get __dirname equivalent for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// In production (esbuild bundle), import.meta.url may not work correctly
+// So we'll use process.cwd() as the base path
+let __dirname: string | undefined;
+try {
+  const __filename = fileURLToPath(import.meta.url);
+  __dirname = path.dirname(__filename);
+} catch (e) {
+  console.warn("[Vite] Could not determine __dirname from import.meta.url, using process.cwd()");
+  __dirname = undefined;
+}
 
 export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
@@ -45,12 +53,9 @@ export async function setupVite(app: Express, server: Server) {
         return;
       }
 
-      const clientTemplate = path.resolve(
-        __dirname,
-        "../..",
-        "client",
-        "index.html"
-      );
+      const clientTemplate = __dirname
+        ? path.resolve(__dirname, "../..", "client", "index.html")
+        : path.resolve(process.cwd(), "client", "index.html");
 
       // always reload the index.html file from disk incase it changes
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
@@ -70,15 +75,15 @@ export async function setupVite(app: Express, server: Server) {
 export function serveStatic(app: Express) {
   // In production (Railway), the built files are in /app/dist
   // The static files are in /app/dist/public
-  // Try multiple possible paths
+  // Try multiple possible paths (process.cwd() first for Railway)
   const possiblePaths = [
-    // Railway production: /app/dist/public
+    // Railway production: /app/dist/public (most likely)
     path.resolve(process.cwd(), "dist", "public"),
     // Development: relative to __dirname
     __dirname ? path.resolve(__dirname, "../..", "dist", "public") : null,
     // Alternative: relative to __dirname in production
     __dirname ? path.resolve(__dirname, "public") : null,
-  ].filter((p): p is string => p !== null);
+  ].filter((p): p is string => p !== null && p !== undefined);
 
   let distPath: string | null = null;
   for (const testPath of possiblePaths) {
