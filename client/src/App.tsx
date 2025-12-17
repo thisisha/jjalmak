@@ -98,7 +98,8 @@ function WriteRoute() {
 }
 
 function Router() {
-  const { isAuthenticated, refresh } = useAuth();
+  const { isAuthenticated } = useAuth();
+  const utils = trpc.useUtils();
   const [location] = useLocation();
 
   // URL에 _auth 파라미터가 있으면 인증 상태를 강제로 갱신
@@ -108,22 +109,47 @@ function Router() {
       console.log("[App] Auth parameter detected, refreshing auth state...");
       
       // iOS Safari는 쿠키 설정 후 즉시 읽을 수 없을 수 있으므로
-      // 약간의 대기 시간 후에 refresh 호출
+      // 더 긴 대기 시간 후에 강제로 refetch
       const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-      if (isIOS) {
-        setTimeout(() => {
-          console.log("[App] iOS Safari: Refreshing auth state after delay");
-          refresh();
-        }, 1000); // iOS는 1초 대기
-      } else {
-        refresh();
-      }
+      const delay = isIOS ? 2000 : 500; // iOS는 2초, 다른 브라우저는 0.5초
+      
+      const refreshAuth = async () => {
+        try {
+          console.log("[App] Invalidating and refetching auth state...");
+          // 캐시 무효화
+          await utils.auth.me.invalidate();
+          
+          // 강제로 refetch
+          const result = await utils.auth.me.refetch();
+          
+          if (result?.data) {
+            console.log("[App] Auth state successfully refreshed:", result.data.id);
+            // 데이터를 명시적으로 캐시에 설정
+            utils.auth.me.setData(undefined, result.data);
+          } else {
+            console.warn("[App] Auth refetch returned no data, retrying...");
+            // 재시도
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            const retryResult = await utils.auth.me.refetch();
+            if (retryResult?.data) {
+              console.log("[App] Auth state refreshed on retry:", retryResult.data.id);
+              utils.auth.me.setData(undefined, retryResult.data);
+            } else {
+              console.error("[App] Failed to refresh auth state after retry");
+            }
+          }
+        } catch (error) {
+          console.error("[App] Error refreshing auth state:", error);
+        }
+      };
+      
+      setTimeout(refreshAuth, delay);
       
       // URL에서 _auth 파라미터 제거 (히스토리 정리)
       const newUrl = window.location.pathname;
       window.history.replaceState({}, "", newUrl);
     }
-  }, [location, refresh]);
+  }, [location, utils]);
 
   return (
     <Switch>
