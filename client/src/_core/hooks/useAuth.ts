@@ -43,10 +43,16 @@ export function useAuth(options?: UseAuthOptions) {
   }, [logoutMutation, utils]);
 
   const state = useMemo(() => {
-    localStorage.setItem(
-      "manus-runtime-user-info",
-      JSON.stringify(meQuery.data)
-    );
+    // iOS Safari에서 localStorage가 제한될 수 있으므로 try-catch로 안전하게 처리
+    try {
+      localStorage.setItem(
+        "manus-runtime-user-info",
+        JSON.stringify(meQuery.data)
+      );
+    } catch (e) {
+      // iOS Safari 사파리 모드 등에서 localStorage 접근이 거부될 수 있음
+      console.warn("Failed to save user info to localStorage:", e);
+    }
     return {
       user: meQuery.data ?? null,
       loading: meQuery.isLoading || logoutMutation.isPending,

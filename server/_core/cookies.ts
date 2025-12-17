@@ -24,29 +24,15 @@ function isSecureRequest(req: Request) {
 export function getSessionCookieOptions(
   req: Request
 ): Pick<CookieOptions, "domain" | "httpOnly" | "path" | "sameSite" | "secure"> {
-  // const hostname = req.hostname;
-  // const shouldSetDomain =
-  //   hostname &&
-  //   !LOCAL_HOSTS.has(hostname) &&
-  //   !isIpAddress(hostname) &&
-  //   hostname !== "127.0.0.1" &&
-  //   hostname !== "::1";
-
-  // const domain =
-  //   shouldSetDomain && !hostname.startsWith(".")
-  //     ? `.${hostname}`
-  //     : shouldSetDomain
-  //       ? hostname
-  //       : undefined;
-
   const secure = isSecureRequest(req);
 
+  // iOS Safari 호환성을 위해 항상 명시적으로 설정
   return {
     httpOnly: true,
     path: "/",
-    // SameSite=None 은 Secure가 아닐 경우 브라우저에서 거부됨.
+    // iOS Safari는 SameSite=None일 때 반드시 Secure=true가 필요
     // 로컬 개발(http://localhost)에서는 Lax로, https 환경에서는 None + Secure로 설정.
     sameSite: secure ? "none" : "lax",
-    secure,
+    secure: secure, // iOS Safari는 Secure 플래그가 필수
   };
 }

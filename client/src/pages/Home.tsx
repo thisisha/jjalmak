@@ -268,7 +268,11 @@ export default function Home() {
 
   // 초기 진입 시 브라우저 GPS로 현재 위치를 가져와 동네 설정
   // 프로필에 동네가 있으면 API 호출 없이 바로 사용
+  // iOS Safari는 사용자 제스처 내에서만 위치 정보를 요청할 수 있으므로
+  // 자동으로 위치를 가져오지 않고 사용자가 명시적으로 요청할 때만 가져옴
   const hasInitialized = useRef(false);
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  
   useEffect(() => {
     // 한 번만 실행되도록 보장
     if (hasInitialized.current) return;
@@ -279,14 +283,20 @@ export default function Home() {
       setNeighborhood((user as any).neighborhood);
       setDefaultNeighborhood((user as any).neighborhood);
       setIsLoadingLocation(false);
-      // 프로필 동네가 있으면 GPS 업데이트는 사용자가 명시적으로 요청할 때만
-      // (예: "위치를 허용해주세요" 버튼 클릭 시)
       return;
     }
     
-    // 프로필 동네가 없을 때만 GPS로 위치 가져오기 (API 호출 발생)
+    // iOS Safari는 사용자 제스처 없이 위치 정보를 요청할 수 없으므로
+    // 자동으로 위치를 가져오지 않고 사용자에게 버튼을 표시
+    if (isIOS) {
+      setIsLoadingLocation(false);
+      setLocationError("위치 권한을 허용해주세요");
+      return;
+    }
+    
+    // iOS가 아닌 경우에만 자동으로 위치 가져오기
     getCurrentLocation();
-  }, [user, getCurrentLocation]); // user가 변경될 때만 재실행
+  }, [user, getCurrentLocation, isIOS]); // user가 변경될 때만 재실행
 
   // Update default neighborhood in context when it changes
   useEffect(() => {

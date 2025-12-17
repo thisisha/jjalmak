@@ -126,10 +126,15 @@ export default function LoginPage() {
       console.log("[Login] Full URL:", fullUrl);
       console.log("[Login] Request body:", requestBody);
       
+      // iOS Safari 호환성을 위해 명시적으로 credentials 설정
       const response = await fetch(fullUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        credentials: "include", // iOS Safari에서 쿠키 전송을 위해 필수
+        mode: "cors", // CORS 모드 명시
         body: JSON.stringify(requestBody),
       });
 
