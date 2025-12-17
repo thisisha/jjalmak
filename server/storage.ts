@@ -1,10 +1,27 @@
 // Local file storage (replaces Manus storage)
 import fs from "fs/promises";
 import path from "path";
+import { ENV } from "./env";
 
 // Use process.cwd() instead of import.meta.dirname for production bundle compatibility
 const UPLOAD_DIR = path.resolve(process.cwd(), "public", "uploads");
-const UPLOAD_URL_PREFIX = "/uploads";
+
+// In production, use Railway backend URL for image URLs
+// In development, use relative path
+function getUploadUrlPrefix(): string {
+  // Check if we have a backend URL configured (for production)
+  const backendUrl = process.env.VITE_API_BASE_URL || process.env.API_BASE_URL;
+  const isProduction = process.env.NODE_ENV === "production";
+  if (backendUrl && isProduction) {
+    // Remove trailing slash
+    const cleanUrl = backendUrl.replace(/\/$/, "");
+    return `${cleanUrl}/uploads`;
+  }
+  // Development: use relative path
+  return "/uploads";
+}
+
+const UPLOAD_URL_PREFIX = getUploadUrlPrefix();
 
 // Ensure upload directory exists
 async function ensureUploadDir() {
