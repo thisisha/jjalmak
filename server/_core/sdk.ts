@@ -260,9 +260,25 @@ class SDKServer {
     // Simple authentication flow (no Manus OAuth)
     const cookies = this.parseCookies(req.headers.cookie);
     const sessionCookie = cookies.get(COOKIE_NAME);
+    
+    // iOS Safari 디버깅을 위한 로그
+    if (!sessionCookie) {
+      console.warn("[Auth] No session cookie found in request", {
+        hasCookieHeader: !!req.headers.cookie,
+        cookieHeaderLength: req.headers.cookie?.length || 0,
+        userAgent: req.headers["user-agent"],
+        origin: req.headers.origin,
+        referer: req.headers.referer,
+      });
+    }
+    
     const session = await this.verifySession(sessionCookie);
 
     if (!session) {
+      console.warn("[Auth] Session verification failed", {
+        hasCookie: !!sessionCookie,
+        cookieLength: sessionCookie?.length || 0,
+      });
       throw ForbiddenError("Invalid session cookie");
     }
 

@@ -116,11 +116,19 @@ function Router() {
       const refreshAuth = async () => {
         try {
           console.log("[App] Invalidating and refetching auth state...");
+          console.log("[App] Current cookies:", document.cookie);
+          
           // 캐시 무효화
           await utils.auth.me.invalidate();
           
           // 강제로 refetch
           const result = await utils.auth.me.refetch();
+          
+          console.log("[App] Refetch result:", {
+            hasData: !!result?.data,
+            data: result?.data ? { id: result.data.id, email: result.data.email } : null,
+            error: result?.error,
+          });
           
           if (result?.data) {
             console.log("[App] Auth state successfully refreshed:", result.data.id);
@@ -128,18 +136,30 @@ function Router() {
             utils.auth.me.setData(undefined, result.data);
           } else {
             console.warn("[App] Auth refetch returned no data, retrying...");
-            // 재시도
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            console.log("[App] Cookies before retry:", document.cookie);
+            
+            // 재시도 (iOS Safari는 더 긴 대기 시간 필요)
+            const retryDelay = isIOS ? 2000 : 1000;
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+            
             const retryResult = await utils.auth.me.refetch();
+            console.log("[App] Retry result:", {
+              hasData: !!retryResult?.data,
+              data: retryResult?.data ? { id: retryResult.data.id } : null,
+              error: retryResult?.error,
+            });
+            
             if (retryResult?.data) {
               console.log("[App] Auth state refreshed on retry:", retryResult.data.id);
               utils.auth.me.setData(undefined, retryResult.data);
             } else {
               console.error("[App] Failed to refresh auth state after retry");
+              console.error("[App] Final cookies:", document.cookie);
             }
           }
         } catch (error) {
           console.error("[App] Error refreshing auth state:", error);
+          console.error("[App] Cookies on error:", document.cookie);
         }
       };
       

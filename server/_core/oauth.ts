@@ -62,6 +62,15 @@ export function registerOAuthRoutes(app: Express) {
       });
 
       const cookieOptions = getSessionCookieOptions(req);
+      console.log("[Auth] Cookie options:", {
+        httpOnly: cookieOptions.httpOnly,
+        secure: cookieOptions.secure,
+        sameSite: cookieOptions.sameSite,
+        path: cookieOptions.path,
+        maxAge: ONE_YEAR_MS,
+        isSecure: req.protocol === "https" || req.headers["x-forwarded-proto"] === "https",
+      });
+      
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
       console.log("[Auth] Login successful for user:", user.id);
