@@ -166,7 +166,8 @@ export default function LoginPage() {
         // 하지만 로그인 응답이 성공했다면 쿠키는 설정되었을 것
         
         // iOS Safari는 쿠키 설정 후 더 긴 대기 시간 필요
-        await new Promise(resolve => setTimeout(resolve, 4000)); // iOS는 4초 대기 (3초에서 증가)
+        // 쿠키가 브라우저에 저장되고 다음 요청에 포함될 때까지 대기
+        await new Promise(resolve => setTimeout(resolve, 5000)); // iOS는 5초 대기 (4초에서 증가)
         
         // iOS에서는 refetch 시도 없이 바로 리로드
         // 리로드 후 쿠키가 확실히 설정된 상태에서 auth.me를 호출

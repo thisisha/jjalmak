@@ -116,10 +116,17 @@ function Router() {
       const refreshAuth = async () => {
         try {
           console.log("[App] Invalidating and refetching auth state...");
-          console.log("[App] Current cookies:", document.cookie);
+          // httpOnly 쿠키는 document.cookie에 나타나지 않으므로 로그만 남김
+          console.log("[App] Note: httpOnly cookies are not visible in document.cookie");
           
           // 캐시 무효화
           await utils.auth.me.invalidate();
+          
+          // iOS Safari는 쿠키 전송이 지연될 수 있으므로 추가 대기
+          if (isIOS) {
+            console.log("[App] iOS Safari: Additional wait before refetch...");
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
           
           // 강제로 refetch
           const result = await utils.auth.me.refetch();
@@ -127,41 +134,45 @@ function Router() {
           console.log("[App] Refetch result:", {
             hasData: !!result?.data,
             data: result?.data ? { id: result.data.id, email: result.data.email } : null,
-            error: result?.error,
+            error: result?.error ? {
+              message: result.error.message,
+              code: result.error.data?.code,
+            } : null,
           });
           
           if (result?.data) {
-            console.log("[App] Auth state successfully refreshed:", result.data.id);
+            console.log("[App] ✅ Auth state successfully refreshed:", result.data.id);
             // 데이터를 명시적으로 캐시에 설정
             utils.auth.me.setData(undefined, result.data);
           } else {
-            console.warn("[App] Auth refetch returned no data, retrying...");
-            // httpOnly 쿠키는 document.cookie에 나타나지 않으므로 확인 불가
-            // 하지만 로그는 남겨둠
-            console.log("[App] Cookies before retry (httpOnly cookies not visible):", document.cookie);
+            console.warn("[App] ⚠️ Auth refetch returned no data, retrying...");
             
             // 재시도 (iOS Safari는 더 긴 대기 시간 필요)
-            const retryDelay = isIOS ? 3000 : 1000; // iOS는 3초 (2초에서 증가)
+            const retryDelay = isIOS ? 4000 : 2000; // iOS는 4초, 다른 브라우저는 2초
+            console.log(`[App] Waiting ${retryDelay}ms before retry...`);
             await new Promise(resolve => setTimeout(resolve, retryDelay));
             
             const retryResult = await utils.auth.me.refetch();
             console.log("[App] Retry result:", {
               hasData: !!retryResult?.data,
               data: retryResult?.data ? { id: retryResult.data.id } : null,
-              error: retryResult?.error,
+              error: retryResult?.error ? {
+                message: retryResult.error.message,
+                code: retryResult.error.data?.code,
+              } : null,
             });
             
             if (retryResult?.data) {
-              console.log("[App] Auth state refreshed on retry:", retryResult.data.id);
+              console.log("[App] ✅ Auth state refreshed on retry:", retryResult.data.id);
               utils.auth.me.setData(undefined, retryResult.data);
             } else {
-              console.error("[App] Failed to refresh auth state after retry");
-              console.error("[App] Final cookies:", document.cookie);
+              console.error("[App] ❌ Failed to refresh auth state after retry");
+              console.error("[App] This likely means cookies are not being sent from iOS Safari");
+              console.error("[App] Check Railway logs for '[Auth] No session cookie found in request'");
             }
           }
         } catch (error) {
-          console.error("[App] Error refreshing auth state:", error);
-          console.error("[App] Cookies on error:", document.cookie);
+          console.error("[App] ❌ Error refreshing auth state:", error);
         }
       };
       
