@@ -152,13 +152,14 @@ export default function LoginPage() {
       
       // Try to refetch auth state with longer wait times on mobile
       let retries = 0;
-      let userData = null;
+      let userData: { data: any } | null = null;
       const maxRetries = isMobile ? 5 : 3; // 모바일: 최대 5번 재시도
       
-      while (retries < maxRetries && !userData) {
+      while (retries < maxRetries && !userData?.data) {
         try {
           console.log(`[Login] Auth refetch attempt ${retries + 1}/${maxRetries}`);
-          userData = await utils.auth.me.refetch();
+          const result = await utils.auth.me.refetch();
+          userData = result as { data: any } | null;
           
           if (userData?.data) {
             console.log("[Login] Auth state successfully updated:", userData.data.id);
@@ -187,7 +188,8 @@ export default function LoginPage() {
         
         // 마지막 시도
         try {
-          userData = await utils.auth.me.refetch();
+          const result = await utils.auth.me.refetch();
+          userData = result as { data: any } | null;
           if (userData?.data) {
             utils.auth.me.setData(undefined, userData.data);
             console.log("[Login] Mobile: Auth state updated after additional wait");
