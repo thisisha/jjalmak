@@ -105,7 +105,19 @@ function Router() {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has("_auth")) {
       console.log("[App] Auth parameter detected, refreshing auth state...");
-      refresh();
+      
+      // iOS Safari는 쿠키 설정 후 즉시 읽을 수 없을 수 있으므로
+      // 약간의 대기 시간 후에 refresh 호출
+      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if (isIOS) {
+        setTimeout(() => {
+          console.log("[App] iOS Safari: Refreshing auth state after delay");
+          refresh();
+        }, 1000); // iOS는 1초 대기
+      } else {
+        refresh();
+      }
+      
       // URL에서 _auth 파라미터 제거 (히스토리 정리)
       const newUrl = window.location.pathname;
       window.history.replaceState({}, "", newUrl);

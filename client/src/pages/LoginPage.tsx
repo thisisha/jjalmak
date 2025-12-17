@@ -148,28 +148,43 @@ export default function LoginPage() {
 
       toast.success(isLogin ? "로그인되었습니다!" : "회원가입되었습니다!");
       
-      // Wait longer for cookie to be set, especially on mobile
+      // iOS Safari는 쿠키 설정 후 즉시 다음 요청에 쿠키를 포함하지 않을 수 있음
+      // 따라서 로그인 성공 후 바로 페이지를 리로드하고, 리로드 후에 auth.me를 호출
+      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      const initialWaitTime = isMobile ? 2000 : 800; // 모바일: 2초, 데스크톱: 0.8초
+      
+      if (isIOS) {
+        // iOS Safari: 쿠키 설정을 위해 충분한 대기 시간 후 리로드
+        console.log("[Login] iOS Safari detected, waiting for cookie to be set...");
+        await new Promise(resolve => setTimeout(resolve, 3000)); // iOS는 3초 대기
+        
+        // iOS에서는 refetch 시도 없이 바로 리로드
+        const timestamp = Date.now();
+        const redirectUrl = `/?_auth=${timestamp}`;
+        console.log("[Login] iOS Safari: Reloading page immediately");
+        window.location.replace(redirectUrl);
+        return;
+      }
+      
+      // 다른 브라우저: 쿠키 설정 대기 후 refetch 시도
+      const initialWaitTime = isMobile ? 2000 : 800;
       await new Promise(resolve => setTimeout(resolve, initialWaitTime));
       
-      // Refresh auth state multiple times to ensure it's updated
+      // Refresh auth state
       await utils.auth.me.invalidate();
       
-      // Try to refetch auth state with longer wait times on mobile
+      // Try to refetch auth state
       let retries = 0;
       let userData: any = null;
-      const maxRetries = isMobile ? 5 : 3; // 모바일: 최대 5번 재시도
+      const maxRetries = isMobile ? 5 : 3;
       
       while (retries < maxRetries && !userData) {
         try {
           console.log(`[Login] Auth refetch attempt ${retries + 1}/${maxRetries}`);
           const result = await utils.auth.me.refetch();
-          // refetch()는 QueryObserverResult를 반환하므로 data 속성 확인
           if (result?.data) {
             userData = result.data;
             console.log("[Login] Auth state successfully updated:", userData.id);
-            // 데이터가 있으면 React Query 캐시에 명시적으로 설정
             utils.auth.me.setData(undefined, userData);
             break;
           } else {
@@ -181,18 +196,16 @@ export default function LoginPage() {
         
         retries++;
         if (retries < maxRetries) {
-          // 모바일에서는 더 긴 대기 시간
           const waitTime = isMobile ? 1000 : 500;
           await new Promise(resolve => setTimeout(resolve, waitTime));
         }
       }
       
-      // 모바일에서는 쿠키가 제대로 설정되었는지 확인하기 위해 추가 대기
+      // 모바일에서 refetch 실패 시 추가 대기 후 재시도
       if (isMobile && !userData) {
         console.log("[Login] Mobile: Waiting additional time for cookie to be set...");
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
-        // 마지막 시도
         try {
           const result = await utils.auth.me.refetch();
           if (result?.data) {
@@ -206,10 +219,8 @@ export default function LoginPage() {
       }
       
       // Force page reload to ensure cookies are properly set and auth state is refreshed
-      // URL에 timestamp를 추가하여 캐시를 우회하고 인증 상태를 강제로 갱신
       const timestamp = Date.now();
       const redirectUrl = `/?_auth=${timestamp}`;
-      
       console.log("[Login] Reloading page to ensure auth state is updated");
       window.location.replace(redirectUrl);
     } catch (error) {
