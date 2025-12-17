@@ -152,19 +152,19 @@ export default function LoginPage() {
       
       // Try to refetch auth state with longer wait times on mobile
       let retries = 0;
-      let userData: { data: any } | null = null;
+      let userData: any = null;
       const maxRetries = isMobile ? 5 : 3; // 모바일: 최대 5번 재시도
       
-      while (retries < maxRetries && !userData?.data) {
+      while (retries < maxRetries && !userData) {
         try {
           console.log(`[Login] Auth refetch attempt ${retries + 1}/${maxRetries}`);
           const result = await utils.auth.me.refetch();
-          userData = result as { data: any } | null;
-          
-          if (userData?.data) {
-            console.log("[Login] Auth state successfully updated:", userData.data.id);
+          // refetch()는 QueryObserverResult를 반환하므로 data 속성 확인
+          if (result?.data) {
+            userData = result.data;
+            console.log("[Login] Auth state successfully updated:", userData.id);
             // 데이터가 있으면 React Query 캐시에 명시적으로 설정
-            utils.auth.me.setData(undefined, userData.data);
+            utils.auth.me.setData(undefined, userData);
             break;
           } else {
             console.warn(`[Login] Auth refetch attempt ${retries + 1} returned no data`);
@@ -182,16 +182,16 @@ export default function LoginPage() {
       }
       
       // 모바일에서는 쿠키가 제대로 설정되었는지 확인하기 위해 추가 대기
-      if (isMobile && !userData?.data) {
+      if (isMobile && !userData) {
         console.log("[Login] Mobile: Waiting additional time for cookie to be set...");
         await new Promise(resolve => setTimeout(resolve, 1500));
         
         // 마지막 시도
         try {
           const result = await utils.auth.me.refetch();
-          userData = result as { data: any } | null;
-          if (userData?.data) {
-            utils.auth.me.setData(undefined, userData.data);
+          if (result?.data) {
+            userData = result.data;
+            utils.auth.me.setData(undefined, userData);
             console.log("[Login] Mobile: Auth state updated after additional wait");
           }
         } catch (e) {
