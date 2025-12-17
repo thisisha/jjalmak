@@ -261,14 +261,27 @@ class SDKServer {
     const cookies = this.parseCookies(req.headers.cookie);
     const sessionCookie = cookies.get(COOKIE_NAME);
     
-    // iOS Safari 디버깅을 위한 로그
+    // iOS Safari 디버깅을 위한 상세 로그
+    const isIOS = req.headers["user-agent"]?.includes("iPhone") || 
+                  req.headers["user-agent"]?.includes("iPad") || 
+                  req.headers["user-agent"]?.includes("iPod");
+    
     if (!sessionCookie) {
       console.warn("[Auth] No session cookie found in request", {
         hasCookieHeader: !!req.headers.cookie,
+        cookieHeader: req.headers.cookie || "(empty)",
         cookieHeaderLength: req.headers.cookie?.length || 0,
         userAgent: req.headers["user-agent"],
+        isIOS: isIOS,
         origin: req.headers.origin,
         referer: req.headers.referer,
+        allCookies: cookies.size > 0 ? Array.from(cookies.keys()) : [],
+      });
+    } else if (isIOS) {
+      // iOS Safari에서 쿠키가 있는 경우도 로그 (디버깅용)
+      console.log("[Auth] iOS Safari - Session cookie found", {
+        cookieLength: sessionCookie.length,
+        cookiePrefix: sessionCookie.substring(0, 20) + "...",
       });
     }
     
@@ -278,6 +291,8 @@ class SDKServer {
       console.warn("[Auth] Session verification failed", {
         hasCookie: !!sessionCookie,
         cookieLength: sessionCookie?.length || 0,
+        isIOS: isIOS,
+        cookiePrefix: sessionCookie ? sessionCookie.substring(0, 20) + "..." : null,
       });
       throw ForbiddenError("Invalid session cookie");
     }
