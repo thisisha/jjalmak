@@ -1,54 +1,29 @@
-// Local file storage (replaces Manus storage)
-import fs from "fs/promises";
-import path from "path";
+// Supabase Storage for image uploads
+import { createClient } from "@supabase/supabase-js";
 import { ENV } from "./env";
 
-// Use process.cwd() instead of import.meta.dirname for production bundle compatibility
+// Initialize Supabase client
+let supabaseClient: ReturnType<typeof createClient> | null = null;
+
+function getSupabaseClient() {
+  if (!supabaseClient && ENV.supabaseUrl && ENV.supabaseServiceKey) {
+    supabaseClient = createClient(ENV.supabaseUrl, ENV.supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+    console.log("[Storage] Supabase client initialized");
+  }
+  return supabaseClient;
+}
+
+// Fallback to local storage if Supabase is not configured
+import fs from "fs/promises";
+import path from "path";
+
 const UPLOAD_DIR = path.resolve(process.cwd(), "public", "uploads");
-
-// In production, use Railway backend URL for image URLs
-// In development, use relative path
-function getUploadUrlPrefix(): string {
-  // Check if we have a backend URL configured (for production)
-  // Note: VITE_API_BASE_URL is a client-side env var, so we need to check server-side vars
-  const backendUrl = process.env.API_BASE_URL || process.env.RAILWAY_PUBLIC_DOMAIN;
-  const isProduction = process.env.NODE_ENV === "production";
-  
-  // Log for debugging
-  console.log("[Storage] Upload URL prefix config:", {
-    backendUrl,
-    isProduction,
-    nodeEnv: process.env.NODE_ENV,
-  });
-  
-  if (backendUrl && isProduction) {
-    // Remove trailing slash and ensure https
-    let cleanUrl = backendUrl.replace(/\/$/, "");
-    if (!cleanUrl.startsWith("http://") && !cleanUrl.startsWith("https://")) {
-      cleanUrl = `https://${cleanUrl}`;
-    }
-    const url = `${cleanUrl}/uploads`;
-    console.log("[Storage] Using absolute URL for images:", url);
-    return url;
-  }
-  // Development: use relative path
-  console.log("[Storage] Using relative URL for images: /uploads");
-  return "/uploads";
-}
-
-const UPLOAD_URL_PREFIX = getUploadUrlPrefix();
-
-// Ensure upload directory exists
-async function ensureUploadDir() {
-  try {
-    await fs.mkdir(UPLOAD_DIR, { recursive: true });
-  } catch (error) {
-    console.error("[Storage] Failed to create upload directory:", error);
-  }
-}
-
-// Initialize on module load
-ensureUploadDir();
+const BUCKET_NAME = "posts"; // Supabase Storage bucket name
 
 function normalizeKey(relKey: string): string {
   // Remove leading slashes and ensure safe filename
@@ -62,37 +37,116 @@ function normalizeKey(relKey: string): string {
 export async function storagePut(
   relKey: string,
   data: Buffer | Uint8Array | string,
-  contentType = "application/octet-stream"
+  contentType = "image/jpeg"
 ): Promise<{ key: string; url: string }> {
-  await ensureUploadDir();
-  
   const key = normalizeKey(relKey);
+  const supabase = getSupabaseClient();
+  
+  // Convert data to buffer
+  const buffer = typeof data === "string" 
+    ? Buffer.from(data.replace(/^data:image\/\w+;base64,/, ""), "base64")
+    : Buffer.from(data);
+  
+  // Try Supabase Storage first
+  if (supabase) {
+    try {
+      console.log("[Storage] Uploading to Supabase Storage:", {
+        bucket: BUCKET_NAME,
+        key,
+        size: buffer.length,
+        contentType,
+      });
+      
+      const { data: uploadData, error } = await supabase.storage
+        .from(BUCKET_NAME)
+        .upload(key, buffer, {
+          contentType,
+          upsert: true, // Overwrite if exists
+        });
+      
+      if (error) {
+        console.error("[Storage] Supabase upload error:", error);
+        throw error;
+      }
+      
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from(BUCKET_NAME)
+        .getPublicUrl(key);
+      
+      const publicUrl = urlData.publicUrl;
+      console.log("[Storage] Image uploaded to Supabase:", {
+        key,
+        url: publicUrl,
+        size: buffer.length,
+      });
+      
+      return { key, url: publicUrl };
+    } catch (error) {
+      console.error("[Storage] Supabase upload failed, falling back to local storage:", error);
+      // Fall through to local storage
+    }
+  }
+  
+  // Fallback to local storage
+  console.log("[Storage] Using local storage (Supabase not configured)");
+  await fs.mkdir(UPLOAD_DIR, { recursive: true });
+  
   const filePath = path.join(UPLOAD_DIR, key);
   const fileDir = path.dirname(filePath);
-  
-  // Ensure directory exists
   await fs.mkdir(fileDir, { recursive: true });
-  
-  // Write file
-  const buffer = typeof data === "string" ? Buffer.from(data, "base64") : Buffer.from(data);
   await fs.writeFile(filePath, buffer);
   
-  // Log for debugging
-  console.log("[Storage] Image uploaded successfully:", {
+  // Use Railway backend URL for local storage in production
+  const backendUrl = process.env.API_BASE_URL || process.env.RAILWAY_PUBLIC_DOMAIN;
+  const isProduction = process.env.NODE_ENV === "production";
+  let url: string;
+  
+  if (backendUrl && isProduction) {
+    let cleanUrl = backendUrl.replace(/\/$/, "");
+    if (!cleanUrl.startsWith("http://") && !cleanUrl.startsWith("https://")) {
+      cleanUrl = `https://${cleanUrl}`;
+    }
+    url = `${cleanUrl}/uploads/${key}`;
+  } else {
+    url = `/uploads/${key}`;
+  }
+  
+  console.log("[Storage] Image uploaded to local storage:", {
     key,
     filePath,
-    fileSize: buffer.length,
-    contentType,
-    url: `${UPLOAD_URL_PREFIX}/${key}`,
+    url,
+    size: buffer.length,
   });
   
-  // Return public URL
-  const url = `${UPLOAD_URL_PREFIX}/${key}`;
   return { key, url };
 }
 
 export async function storageGet(relKey: string): Promise<{ key: string; url: string; }> {
   const key = relKey.replace(/^\/+/, "");
-  const url = `${UPLOAD_URL_PREFIX}/${key}`;
+  const supabase = getSupabaseClient();
+  
+  if (supabase) {
+    const { data: urlData } = supabase.storage
+      .from(BUCKET_NAME)
+      .getPublicUrl(key);
+    return { key, url: urlData.publicUrl };
+  }
+  
+  // Fallback to local storage
+  const backendUrl = process.env.API_BASE_URL || process.env.RAILWAY_PUBLIC_DOMAIN;
+  const isProduction = process.env.NODE_ENV === "production";
+  let url: string;
+  
+  if (backendUrl && isProduction) {
+    let cleanUrl = backendUrl.replace(/\/$/, "");
+    if (!cleanUrl.startsWith("http://") && !cleanUrl.startsWith("https://")) {
+      cleanUrl = `https://${cleanUrl}`;
+    }
+    url = `${cleanUrl}/uploads/${key}`;
+  } else {
+    url = `/uploads/${key}`;
+  }
+  
   return { key, url };
 }
