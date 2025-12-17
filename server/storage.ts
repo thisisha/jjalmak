@@ -77,6 +77,15 @@ export async function storagePut(
   const buffer = typeof data === "string" ? Buffer.from(data, "base64") : Buffer.from(data);
   await fs.writeFile(filePath, buffer);
   
+  // Log for debugging
+  console.log("[Storage] Image uploaded successfully:", {
+    key,
+    filePath,
+    fileSize: buffer.length,
+    contentType,
+    url: `${UPLOAD_URL_PREFIX}/${key}`,
+  });
+  
   // Return public URL
   const url = `${UPLOAD_URL_PREFIX}/${key}`;
   return { key, url };

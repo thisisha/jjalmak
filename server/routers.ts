@@ -68,6 +68,11 @@ export const appRouter = router({
       )
       .mutation(async ({ input }) => {
         try {
+          console.log("[Storage] Image upload request received:", {
+            mimeType: input.mimeType,
+            base64Length: input.base64.length,
+          });
+          
           // Convert base64 to buffer
           const base64Data = input.base64.replace(/^data:image\/\w+;base64,/, "");
           const buffer = Buffer.from(base64Data, "base64");
@@ -77,10 +82,17 @@ export const appRouter = router({
           const filename = `posts/${Date.now()}-${Math.random().toString(36).substring(7)}.${extension}`;
 
           // Upload to storage
-          const { url } = await storagePut(filename, buffer, input.mimeType);
+          const { url, key } = await storagePut(filename, buffer, input.mimeType);
+          
+          console.log("[Storage] Image upload completed:", {
+            key,
+            url,
+            finalKey: key,
+          });
 
-          return { url, key: filename };
+          return { url, key };
         } catch (error) {
+          console.error("[Storage] Image upload failed:", error);
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: `Failed to upload image: ${error instanceof Error ? error.message : "Unknown error"}`,

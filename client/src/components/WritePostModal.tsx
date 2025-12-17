@@ -222,9 +222,20 @@ export function WritePostModal({
           });
 
           // Upload to server
+          console.log("[WritePost] Uploading image:", {
+            fileName: file.name,
+            fileSize: file.size,
+            mimeType: file.type,
+          });
+          
           const result = await uploadImageMutation.mutateAsync({
             base64,
             mimeType: file.type,
+          });
+
+          console.log("[WritePost] Image upload result:", {
+            url: result.url,
+            key: result.key,
           });
 
           return result.url;
