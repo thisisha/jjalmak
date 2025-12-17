@@ -258,13 +258,30 @@ export function PostDetailModal({
   const category = categories.find((c) => c.value === post.category);
   // Safely parse images - handle both JSON array and single string URL
   const images = (() => {
-    if (!post.images) return [];
+    if (!post.images) {
+      console.log("[PostDetail] No images in post:", post.id);
+      return [];
+    }
     try {
       const parsed = JSON.parse(post.images as string);
-      return Array.isArray(parsed) ? parsed : [parsed];
-    } catch {
+      const result = Array.isArray(parsed) ? parsed : [parsed];
+      console.log("[PostDetail] Parsed images:", {
+        postId: post.id,
+        rawImages: post.images,
+        parsedImages: result,
+        imageCount: result.length,
+      });
+      return result;
+    } catch (error) {
       // If parsing fails, treat as single URL string
-      return typeof post.images === "string" ? [post.images] : [];
+      const result = typeof post.images === "string" ? [post.images] : [];
+      console.log("[PostDetail] Failed to parse images, using as string:", {
+        postId: post.id,
+        rawImages: post.images,
+        error,
+        result,
+      });
+      return result;
     }
   })();
   const comments = (post as any).comments || [];

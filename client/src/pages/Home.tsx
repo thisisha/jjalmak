@@ -780,16 +780,26 @@ function PostCard({ post, onEmpathy, categories, onClick, onShowInMap }: PostCar
         </div>
 
         {/* Images Preview */}
-        {post.images && (() => {
+        {(() => {
           // Safely parse images - handle both JSON array and single string URL
           let imageArray: string[] = [];
-          try {
-            const parsed = JSON.parse((post.images as string) || "[]");
-            imageArray = Array.isArray(parsed) ? parsed : [parsed];
-          } catch {
-            // If parsing fails, treat as single URL string
-            imageArray = typeof post.images === "string" ? [post.images] : [];
+          if (post.images) {
+            try {
+              const parsed = JSON.parse((post.images as string) || "[]");
+              imageArray = Array.isArray(parsed) ? parsed : [parsed];
+            } catch {
+              // If parsing fails, treat as single URL string
+              imageArray = typeof post.images === "string" ? [post.images] : [];
+            }
           }
+          
+          console.log("[Home] Post images:", {
+            postId: post.id,
+            rawImages: post.images,
+            parsedImages: imageArray,
+            imageCount: imageArray.length,
+          });
+          
           return imageArray.length > 0 ? (
             <div className="flex gap-2 overflow-x-auto py-2">
               {imageArray.map((img: string, idx: number) => (
@@ -801,6 +811,9 @@ function PostCard({ post, onEmpathy, categories, onClick, onShowInMap }: PostCar
                   onError={(e) => {
                     console.error("[Home] Failed to load image:", img);
                     (e.target as HTMLImageElement).style.display = "none";
+                  }}
+                  onLoad={() => {
+                    console.log("[Home] Image loaded successfully:", img);
                   }}
                 />
               ))}
