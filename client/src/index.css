@@ -194,10 +194,15 @@ select {
   .bottom-nav {
     @apply fixed bottom-0 left-0 right-0 flex items-center justify-around border-t border-border bg-card px-0 py-2 shadow-lg;
     z-index: 40;
+    padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 
   .bottom-nav-item {
-    @apply flex flex-col items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs font-medium transition-colors duration-200;
+    @apply flex flex-col items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs font-medium transition-colors duration-200 touch-manipulation;
+    min-height: 44px;
+    min-width: 44px;
   }
 
   .bottom-nav-item.active {
@@ -205,7 +210,7 @@ select {
   }
 
   .bottom-nav-item:not(.active) {
-    @apply text-muted-foreground hover:text-foreground;
+    @apply text-muted-foreground hover:text-foreground active:opacity-70;
   }
 
   /* Card post styles */
