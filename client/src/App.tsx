@@ -17,6 +17,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { Button } from "@/components/ui/button";
 import { WritePostModal } from "./components/WritePostModal";
+import { trpc } from "@/lib/trpc";
 
 function BottomNavigation() {
   const [location, setLocation] = useLocation();
