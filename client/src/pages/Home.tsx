@@ -780,18 +780,29 @@ function PostCard({ post, onEmpathy, categories, onClick, onShowInMap }: PostCar
         </div>
 
         {/* Images Preview */}
-        {post.images && post.images.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto">
-                {JSON.parse((post.images as string) || "[]").map((img: string, idx: number) => (
-              <img
-                key={idx}
-                src={img}
-                alt="post thumbnail"
-                className="w-16 h-16 rounded-md object-cover flex-shrink-0"
-              />
-            ))}
-          </div>
-        )}
+        {post.images && (() => {
+          // Safely parse images - handle both JSON array and single string URL
+          let imageArray: string[] = [];
+          try {
+            const parsed = JSON.parse((post.images as string) || "[]");
+            imageArray = Array.isArray(parsed) ? parsed : [parsed];
+          } catch {
+            // If parsing fails, treat as single URL string
+            imageArray = typeof post.images === "string" ? [post.images] : [];
+          }
+          return imageArray.length > 0 ? (
+            <div className="flex gap-2 overflow-x-auto">
+              {imageArray.map((img: string, idx: number) => (
+                <img
+                  key={idx}
+                  src={img}
+                  alt="post thumbnail"
+                  className="w-16 h-16 rounded-md object-cover flex-shrink-0"
+                />
+              ))}
+            </div>
+          ) : null;
+        })()}
 
         {/* Footer */}
         <div className="flex items-center justify-between pt-2 border-t border-border">

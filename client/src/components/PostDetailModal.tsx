@@ -189,7 +189,15 @@ export function PostDetailModal({
           content: {
             title: title,
             description: description,
-            imageUrl: post?.images ? JSON.parse(post.images as string)[0] : undefined,
+            imageUrl: (() => {
+              if (!post?.images) return undefined;
+              try {
+                const parsed = JSON.parse(post.images as string);
+                return Array.isArray(parsed) ? parsed[0] : parsed;
+              } catch {
+                return typeof post.images === "string" ? post.images : undefined;
+              }
+            })(),
             link: {
               mobileWebUrl: url,
               webUrl: url,
@@ -248,7 +256,17 @@ export function PostDetailModal({
   }
 
   const category = categories.find((c) => c.value === post.category);
-  const images = post.images ? JSON.parse(post.images as string) : [];
+  // Safely parse images - handle both JSON array and single string URL
+  const images = (() => {
+    if (!post.images) return [];
+    try {
+      const parsed = JSON.parse(post.images as string);
+      return Array.isArray(parsed) ? parsed : [parsed];
+    } catch {
+      // If parsing fails, treat as single URL string
+      return typeof post.images === "string" ? [post.images] : [];
+    }
+  })();
   const comments = (post as any).comments || [];
   const adminStatus = adminStatusLabels[post.adminStatus] || adminStatusLabels.pending;
   const createdAt = post.createdAt ? new Date(post.createdAt as any) : new Date();
