@@ -50,11 +50,14 @@ export default function LoginPage() {
       
       // Try to refetch auth state
       let retries = 0;
-      let userData = null;
+      let userData: any = null;
       while (retries < 3 && !userData) {
         try {
-          userData = await utils.auth.me.refetch();
-          if (userData?.data) break;
+          const result = await utils.auth.me.refetch();
+          if (result?.data) {
+            userData = result.data;
+            break;
+          }
         } catch (e) {
           console.warn(`[Login] Auth refetch attempt ${retries + 1} failed:`, e);
         }
@@ -64,13 +67,11 @@ export default function LoginPage() {
         }
       }
       
-      // Force page reload on mobile to ensure cookies are properly set
-      if (isMobile) {
-        // Use window.location.replace to avoid back button issues
-        window.location.replace("/");
-      } else {
-        setLocation("/");
-      }
+      // Force page reload to ensure cookies are properly set and auth state is refreshed
+      const timestamp = Date.now();
+      const redirectUrl = `/?_auth=${timestamp}`;
+      console.log("[Login] Reloading page to ensure auth state is updated");
+      window.location.replace(redirectUrl);
     } catch (error) {
       toast.error("카카오 로그인 중 오류가 발생했습니다.");
       console.error(error);

@@ -97,7 +97,20 @@ function WriteRoute() {
 }
 
 function Router() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, refresh } = useAuth();
+  const [location] = useLocation();
+
+  // URL에 _auth 파라미터가 있으면 인증 상태를 강제로 갱신
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has("_auth")) {
+      console.log("[App] Auth parameter detected, refreshing auth state...");
+      refresh();
+      // URL에서 _auth 파라미터 제거 (히스토리 정리)
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, "", newUrl);
+    }
+  }, [location, refresh]);
 
   return (
     <Switch>
