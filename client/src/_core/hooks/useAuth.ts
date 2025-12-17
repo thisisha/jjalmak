@@ -15,7 +15,8 @@ export function useAuth(options?: UseAuthOptions) {
 
   const meQuery = trpc.auth.me.useQuery(undefined, {
     retry: false,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true, // 윈도우 포커스 시 refetch (모바일 리로드 후에도 작동)
+    refetchOnMount: true, // 컴포넌트 마운트 시 항상 refetch
   });
 
   const logoutMutation = trpc.auth.logout.useMutation({

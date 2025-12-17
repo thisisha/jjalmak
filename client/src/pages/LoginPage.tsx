@@ -197,21 +197,13 @@ export default function LoginPage() {
         }
       }
       
-      // Force page reload on mobile to ensure cookies are properly set
-      if (isMobile) {
-        // 모바일에서는 항상 리로드하여 쿠키가 제대로 적용되도록 함
-        console.log("[Login] Mobile: Reloading page to ensure auth state is updated");
-        window.location.replace("/");
-      } else {
-        // 데스크톱에서는 인증 상태가 확인되면 리다이렉트
-        if (userData?.data) {
-          setLocation("/");
-        } else {
-          // 인증 상태가 확인되지 않으면 리로드
-          console.log("[Login] Desktop: Reloading page as auth state not confirmed");
-          window.location.replace("/");
-        }
-      }
+      // Force page reload to ensure cookies are properly set and auth state is refreshed
+      // URL에 timestamp를 추가하여 캐시를 우회하고 인증 상태를 강제로 갱신
+      const timestamp = Date.now();
+      const redirectUrl = `/?_auth=${timestamp}`;
+      
+      console.log("[Login] Reloading page to ensure auth state is updated");
+      window.location.replace(redirectUrl);
     } catch (error) {
       console.error("[Login] Error:", error);
       toast.error("오류가 발생했습니다. 콘솔을 확인해주세요.");
