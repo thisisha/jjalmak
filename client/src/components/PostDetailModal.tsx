@@ -274,7 +274,7 @@ export function PostDetailModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="pr-8">
+        <DialogHeader>
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-2xl">{category?.icon}</span>
             <DialogTitle className="flex-1">
@@ -282,7 +282,7 @@ export function PostDetailModal({
                 {category?.label}
               </span>
             </DialogTitle>
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap pr-10">
               {post.category === "emergency" && (
                 <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full dark:bg-orange-950 dark:text-orange-400 font-semibold flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />
