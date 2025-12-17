@@ -67,18 +67,36 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
-  // Serve uploaded files
+  // Serve uploaded files - MUST be before API-only middleware
   // In Railway, use process.cwd() only (__dirname may be undefined in bundled code)
   const uploadsPath = path.resolve(process.cwd(), "public", "uploads");
   if (fs.existsSync(uploadsPath)) {
-    app.use("/uploads", express.static(uploadsPath));
-    console.log(`[Uploads] Using path: ${uploadsPath}`);
+    // Serve static files from /uploads path
+    app.use("/uploads", express.static(uploadsPath, {
+      // Set proper headers for images
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg') || filePath.endsWith('.png') || filePath.endsWith('.gif') || filePath.endsWith('.webp')) {
+          res.setHeader('Content-Type', 'image/jpeg');
+          res.setHeader('Cache-Control', 'public, max-age=31536000');
+        }
+      }
+    }));
+    console.log(`[Uploads] Serving static files from: ${uploadsPath}`);
   } else {
     console.warn(`[Uploads] Uploads directory not found at: ${uploadsPath}`);
-    // Continue without uploads - not critical for API server
+    // Create directory if it doesn't exist
+    try {
+      fs.mkdirSync(uploadsPath, { recursive: true });
+      app.use("/uploads", express.static(uploadsPath));
+      console.log(`[Uploads] Created and serving from: ${uploadsPath}`);
+    } catch (error) {
+      console.error(`[Uploads] Failed to create uploads directory:`, error);
+    }
   }
+  
   // Auth routes (login/register)
   registerOAuthRoutes(app);
+  
   // tRPC API
   app.use(
     "/api/trpc",
@@ -87,6 +105,7 @@ async function startServer() {
       createContext,
     })
   );
+  
   // development mode uses Vite, production mode is API-only
   // In Railway (production), we only serve API, not static files (Vercel serves frontend)
   if (process.env.NODE_ENV === "development") {
@@ -95,9 +114,15 @@ async function startServer() {
   } else {
     // Railway only serves API, Vercel serves the frontend
     // API-only mode: return 404 for non-API routes
+    // /uploads is already handled above, so it won't reach here
     app.use("*", (req, res, next) => {
-      if (req.path.startsWith("/api") || req.path.startsWith("/uploads")) {
+      // /uploads should already be handled by express.static above
+      if (req.path.startsWith("/api")) {
         next();
+      } else if (req.path.startsWith("/uploads")) {
+        // If we reach here, the file doesn't exist
+        console.warn(`[Uploads] File not found: ${req.path}`);
+        res.status(404).json({ error: "Image not found" });
       } else {
         res.status(404).json({ error: "Not found. This is an API-only server." });
       }
