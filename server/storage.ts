@@ -10,14 +10,29 @@ const UPLOAD_DIR = path.resolve(process.cwd(), "public", "uploads");
 // In development, use relative path
 function getUploadUrlPrefix(): string {
   // Check if we have a backend URL configured (for production)
-  const backendUrl = process.env.VITE_API_BASE_URL || process.env.API_BASE_URL;
+  // Note: VITE_API_BASE_URL is a client-side env var, so we need to check server-side vars
+  const backendUrl = process.env.API_BASE_URL || process.env.RAILWAY_PUBLIC_DOMAIN;
   const isProduction = process.env.NODE_ENV === "production";
+  
+  // Log for debugging
+  console.log("[Storage] Upload URL prefix config:", {
+    backendUrl,
+    isProduction,
+    nodeEnv: process.env.NODE_ENV,
+  });
+  
   if (backendUrl && isProduction) {
-    // Remove trailing slash
-    const cleanUrl = backendUrl.replace(/\/$/, "");
-    return `${cleanUrl}/uploads`;
+    // Remove trailing slash and ensure https
+    let cleanUrl = backendUrl.replace(/\/$/, "");
+    if (!cleanUrl.startsWith("http://") && !cleanUrl.startsWith("https://")) {
+      cleanUrl = `https://${cleanUrl}`;
+    }
+    const url = `${cleanUrl}/uploads`;
+    console.log("[Storage] Using absolute URL for images:", url);
+    return url;
   }
   // Development: use relative path
+  console.log("[Storage] Using relative URL for images: /uploads");
   return "/uploads";
 }
 
