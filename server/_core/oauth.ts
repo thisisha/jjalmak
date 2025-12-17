@@ -87,6 +87,14 @@ export function registerOAuthRoutes(app: Express) {
       // Set-Cookie 헤더를 명시적으로 설정하여 쿠키가 확실히 설정되도록 함
       const setCookieHeader = res.getHeader("Set-Cookie");
       console.log("[Auth] Set-Cookie header:", setCookieHeader);
+      
+      // iOS Safari 호환성을 위해 응답 헤더에 명시적으로 추가 정보 포함
+      // (디버깅용 - 실제로는 res.cookie가 이미 설정함)
+      if (req.headers["user-agent"]?.includes("iPhone") || 
+          req.headers["user-agent"]?.includes("iPad") || 
+          req.headers["user-agent"]?.includes("iPod")) {
+        console.log("[Auth] iOS Safari detected - Cookie set with options:", finalCookieOptions);
+      }
 
       console.log("[Auth] Login successful for user:", user.id);
       res.json({ success: true, user });
