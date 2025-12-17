@@ -106,6 +106,12 @@ export const appRouter = router({
     create: protectedProcedure
       .input(createPostSchema)
       .mutation(async ({ ctx, input }) => {
+        console.log("[Posts] Creating post with images:", {
+          hasImages: !!input.images,
+          imageCount: input.images?.length || 0,
+          imageUrls: input.images,
+        });
+        
         const post = await db.createPost({
           userId: ctx.user.id,
           category: input.category,
@@ -119,6 +125,11 @@ export const appRouter = router({
           empathyCount: 0,
           commentCount: 0,
           adminStatus: "pending",
+        });
+
+        console.log("[Posts] Post created:", {
+          postId: (post as any).insertId || (post as any).id,
+          images: input.images ? JSON.stringify(input.images) : null,
         });
 
         return { success: true, postId: (post as any).insertId || 0 };

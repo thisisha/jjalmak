@@ -791,13 +791,17 @@ function PostCard({ post, onEmpathy, categories, onClick, onShowInMap }: PostCar
             imageArray = typeof post.images === "string" ? [post.images] : [];
           }
           return imageArray.length > 0 ? (
-            <div className="flex gap-2 overflow-x-auto">
+            <div className="flex gap-2 overflow-x-auto py-2">
               {imageArray.map((img: string, idx: number) => (
                 <img
                   key={idx}
                   src={img}
                   alt="post thumbnail"
-                  className="w-16 h-16 rounded-md object-cover flex-shrink-0"
+                  className="w-20 h-20 rounded-md object-cover flex-shrink-0 border"
+                  onError={(e) => {
+                    console.error("[Home] Failed to load image:", img);
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
                 />
               ))}
             </div>

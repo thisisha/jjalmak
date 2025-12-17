@@ -327,6 +327,37 @@ export function PostDetailModal({
           <div className="space-y-3">
             <p className="text-base leading-relaxed">{post.content}</p>
             
+            {/* Images Carousel - Show before location info */}
+            {images.length > 0 && (
+              <div className="relative">
+                <Carousel className="w-full">
+                  <CarouselContent>
+                    {images.map((img: string, idx: number) => (
+                      <CarouselItem key={idx}>
+                        <div className="relative aspect-video w-full overflow-hidden rounded-lg border">
+                          <img
+                            src={img}
+                            alt={`Post image ${idx + 1}`}
+                            className="h-full w-full object-cover"
+                            onError={(e) => {
+                              console.error("[PostDetail] Failed to load image:", img);
+                              (e.target as HTMLImageElement).style.display = "none";
+                            }}
+                          />
+                        </div>
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                  {images.length > 1 && (
+                    <>
+                      <CarouselPrevious className="left-2" />
+                      <CarouselNext className="right-2" />
+                    </>
+                  )}
+                </Carousel>
+              </div>
+            )}
+            
             <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
               <span>{post.isAnonymous ? "익명" : "사용자"}</span>
               <span>•</span>
