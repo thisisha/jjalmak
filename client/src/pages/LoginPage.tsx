@@ -156,17 +156,23 @@ export default function LoginPage() {
       if (isIOS) {
         // iOS Safari: 쿠키 설정을 위해 충분한 대기 시간 후 리로드
         console.log("[Login] iOS Safari detected, waiting for cookie to be set...");
-        console.log("[Login] Response cookies (Set-Cookie header):", response.headers.get("set-cookie"));
-        console.log("[Login] Current cookies before wait:", document.cookie);
+        console.log("[Login] Response status:", response.status);
+        console.log("[Login] Response headers:", {
+          "set-cookie": response.headers.get("set-cookie"),
+          "access-control-allow-credentials": response.headers.get("access-control-allow-credentials"),
+          "access-control-allow-origin": response.headers.get("access-control-allow-origin"),
+        });
+        // httpOnly 쿠키는 document.cookie에 나타나지 않으므로 확인 불가
+        // 하지만 로그인 응답이 성공했다면 쿠키는 설정되었을 것
         
-        await new Promise(resolve => setTimeout(resolve, 3000)); // iOS는 3초 대기
-        
-        console.log("[Login] Cookies after wait:", document.cookie);
+        // iOS Safari는 쿠키 설정 후 더 긴 대기 시간 필요
+        await new Promise(resolve => setTimeout(resolve, 4000)); // iOS는 4초 대기 (3초에서 증가)
         
         // iOS에서는 refetch 시도 없이 바로 리로드
+        // 리로드 후 쿠키가 확실히 설정된 상태에서 auth.me를 호출
         const timestamp = Date.now();
         const redirectUrl = `/?_auth=${timestamp}`;
-        console.log("[Login] iOS Safari: Reloading page immediately to:", redirectUrl);
+        console.log("[Login] iOS Safari: Reloading page to:", redirectUrl);
         window.location.replace(redirectUrl);
         return;
       }

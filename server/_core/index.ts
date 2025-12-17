@@ -59,6 +59,9 @@ async function startServer() {
         return callback(new Error("Not allowed by CORS"));
       },
       credentials: true,
+      // iOS Safari 호환성을 위해 명시적으로 헤더 설정
+      exposedHeaders: ["Set-Cookie"],
+      allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
     })
   );
   // Configure body parser with larger size limit for file uploads

@@ -111,7 +111,7 @@ function Router() {
       // iOS Safari는 쿠키 설정 후 즉시 읽을 수 없을 수 있으므로
       // 더 긴 대기 시간 후에 강제로 refetch
       const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-      const delay = isIOS ? 2000 : 500; // iOS는 2초, 다른 브라우저는 0.5초
+      const delay = isIOS ? 3000 : 500; // iOS는 3초 (2초에서 증가), 다른 브라우저는 0.5초
       
       const refreshAuth = async () => {
         try {
@@ -136,10 +136,12 @@ function Router() {
             utils.auth.me.setData(undefined, result.data);
           } else {
             console.warn("[App] Auth refetch returned no data, retrying...");
-            console.log("[App] Cookies before retry:", document.cookie);
+            // httpOnly 쿠키는 document.cookie에 나타나지 않으므로 확인 불가
+            // 하지만 로그는 남겨둠
+            console.log("[App] Cookies before retry (httpOnly cookies not visible):", document.cookie);
             
             // 재시도 (iOS Safari는 더 긴 대기 시간 필요)
-            const retryDelay = isIOS ? 2000 : 1000;
+            const retryDelay = isIOS ? 3000 : 1000; // iOS는 3초 (2초에서 증가)
             await new Promise(resolve => setTimeout(resolve, retryDelay));
             
             const retryResult = await utils.auth.me.refetch();

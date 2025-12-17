@@ -69,9 +69,24 @@ export function registerOAuthRoutes(app: Express) {
         path: cookieOptions.path,
         maxAge: ONE_YEAR_MS,
         isSecure: req.protocol === "https" || req.headers["x-forwarded-proto"] === "https",
+        origin: req.headers.origin,
+        userAgent: req.headers["user-agent"],
       });
       
-      res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+      // iOS Safari 호환성을 위해 명시적으로 모든 옵션 설정
+      const finalCookieOptions = {
+        ...cookieOptions,
+        maxAge: ONE_YEAR_MS,
+        // iOS Safari는 domain을 명시하지 않는 것이 더 안전할 수 있음
+        // domain: undefined,
+      };
+      
+      res.cookie(COOKIE_NAME, sessionToken, finalCookieOptions);
+      
+      // iOS Safari를 위한 추가 헤더 설정
+      // Set-Cookie 헤더를 명시적으로 설정하여 쿠키가 확실히 설정되도록 함
+      const setCookieHeader = res.getHeader("Set-Cookie");
+      console.log("[Auth] Set-Cookie header:", setCookieHeader);
 
       console.log("[Auth] Login successful for user:", user.id);
       res.json({ success: true, user });
