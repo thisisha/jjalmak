@@ -264,10 +264,6 @@ export default function Home() {
       },
       geoOptions
     );
-        timeout: 10000,
-        maximumAge: 5 * 60 * 1000, // 5분간 캐시 사용
-      }
-    );
   }, [setDefaultNeighborhood]);
 
   // 초기 진입 시 브라우저 GPS로 현재 위치를 가져와 동네 설정
