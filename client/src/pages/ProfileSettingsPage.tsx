@@ -346,6 +346,7 @@ export default function ProfileSettingsPage() {
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
+                capture="user"
                 onChange={handleImageSelect}
                 className="hidden"
               />
